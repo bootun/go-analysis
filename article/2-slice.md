@@ -163,11 +163,13 @@ fmt.Printf("Cap:%v\n", sliceHeader.Cap) // Cap:6
 ```SH
 GOSSAFUNC=main.grow go build -gcflags "-N -l" slice.go
 ```
-**源代码**
-![](slice/slice-3.png)
+**源代码**:
 
-**最终生成的汇编代码**
-![](slice/slice-4.png)
+![](slice/slice-3.png)  
+
+**最终生成的汇编代码**:
+
+![](slice/slice-4.png)  
 
 仔细观察我们发现，源代码第7行所对应的汇编指令中，有一行`CALL runtime.growslice`,这个函数定义在`runtime/slice.go`文件中，函数签名如下
 ```Go
@@ -298,6 +300,7 @@ fmt.Printf("%v\n",foo) // [5 4 0 0 0]
 fmt.Printf("%d\n",i)   // 3
 ```
 上面代码的行为如下图所示：
+
 ![](slice/slice-9.png)
 
 我们`copy`的`dst`是从`foo[2]`开始的，所以`copy`只会将`foo[2]`,`foo[3]`,`foo[4]`使用`bar`进行替换，由于只复制了3个，所以`copy`返回3
