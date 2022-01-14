@@ -184,7 +184,7 @@ func walkMakeSlice(n *ir.MakeExpr, init *ir.Nodes) ir.Node {
     ...
 }
 ```
-PS:这个函数下面就是copy的walk函数，当时在[切片剖析](2-slice.md)一节我们提到了copy函数底层调用了`memmove`,在这里也能看到。
+PS:这个函数下面就是copy的walk函数，当时在[切片剖析](../2-slice.md)一节我们提到了copy函数底层调用了`memmove`,在这里也能看到。
 
 此时我们终于看到，`make`在这里展开变为了`makeslice`，这个函数还有展开前后的处理，这里省略掉了。使用这个方法同样可以查看`map`或`channel`等类型的展开过程。
 
