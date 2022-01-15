@@ -1,6 +1,6 @@
 Go数组剖析
 ====
-本文从语法、编译、汇编、内存等多个角度剖析Go语言中数组的相关内容。
+
 ## 数组的概念
 [数组(array)](https://go.dev/ref/spec#Array_types "Go Specification-Array types")是**单一类型**元素的编号序列，元素的个数称为数组的长度，长度不能为负数。 
 
@@ -123,3 +123,79 @@ func main() {
 可以发现,arr在返回前和返回后的地址是不相同的。
 
 
+## 编译时的数组
+数组在编译时的节点表示为`ir.OTARRAY`,我们可以在类型检查阶段找到对该节点的处理:  
+```Go
+// typecheck1 should ONLY be called from typecheck.
+func typecheck1(n ir.Node, top int) ir.Node {
+    ...
+    switch n.Op() {
+        ...
+        case ir.OTARRAY:
+            n := n.(*ir.ArrayType)
+            return tcArrayType(n)
+        ...
+    }
+}
+```
+我们将`tcArrayType`的关键节点放在下面:
+```Go
+func tcArrayType(n *ir.ArrayType) ir.Node {
+    if n.Len == nil { // [...]T的形式
+        // 如果长度是...会直接返回，等到下一阶段进行处理
+        return n
+    }
+
+    // 检查数组长度是否合法(大小/长度/是否为负数等)
+    // ...
+
+    // 创建数组
+    bound, _ := constant.Int64Val(v)
+    t := types.NewArray(n.Elem.Type(), bound)
+    n.SetOTYPE(t)
+    types.CheckSize(t)
+    return n
+}
+```
+如果直接使用常数作为数组的长度，那么数组的创建在这里就做好了。  
+如果使用`[...]T`+字面量这种形式,则会在`typecheck.tcCompLit`函数中确认元素的数量，并将其op更改为`ir.OARRAYLIT`以便于之后阶段使用
+
+```Go
+func tcCompLit(n *ir.CompLitExpr) (res ir.Node) {
+    ...
+    // Need to handle [...]T arrays specially.
+    if array, ok := n.Ntype.(*ir.ArrayType); ok && array.Elem != nil && array.Len == nil {
+        array.Elem = typecheckNtype(array.Elem)
+        elemType := array.Elem.Type()
+        if elemType == nil {
+            n.SetType(nil)
+            return n
+        }
+        length := typecheckarraylit(elemType, -1, n.List, "array literal")
+        n.SetOp(ir.OARRAYLIT)
+        n.SetType(types.NewArray(elemType, length))
+        n.Ntype = nil
+        return n
+    }
+    ...
+}
+```
+
+如果我们是使用字面值初始化数组的，在`walk.walkCompLit`函数中会分析是否应该将其放置在静态区:
+```go
+// walkCompLit walks a composite literal node:
+// OARRAYLIT, OSLICELIT, OMAPLIT, OSTRUCTLIT (all CompLitExpr), or OPTRLIT (AddrExpr).
+func walkCompLit(n ir.Node, init *ir.Nodes) ir.Node {
+    if isStaticCompositeLiteral(n) && !ssagen.TypeOK(n.Type()) {
+        n := n.(*ir.CompLitExpr) // not OPTRLIT
+        // n can be directly represented in the read-only data section.
+        // Make direct reference to the static data. See issue 12841.
+        vstat := readonlystaticname(n.Type())
+        fixedlit(inInitFunction, initKindStatic, n, vstat, init)
+        return typecheck.Expr(vstat)
+    }
+    var_ := typecheck.Temp(n.Type())
+    nylit(n, var_, init)
+    return var_
+}
+```
