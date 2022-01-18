@@ -149,7 +149,7 @@ func tcArrayType(n *ir.ArrayType) ir.Node {
     // 检查数组长度是否合法(大小/长度/是否为负数等)
     // ...
 
-    // 创建数组
+    // 确定数组类型
     bound, _ := constant.Int64Val(v)
     t := types.NewArray(n.Elem.Type(), bound)
     n.SetOTYPE(t)
@@ -157,7 +157,7 @@ func tcArrayType(n *ir.ArrayType) ir.Node {
     return n
 }
 ```
-如果直接使用常数作为数组的长度，那么数组的创建在这里就做好了。  
+如果直接使用常数作为数组的长度，那么数组的类型在这里就确定好了。  
 如果使用`[...]T`+字面量这种形式,则会在`typecheck.tcCompLit`函数中确认元素的数量，并将其op更改为`ir.OARRAYLIT`以便于之后阶段使用
 
 ```Go
@@ -180,7 +180,7 @@ func tcCompLit(n *ir.CompLitExpr) (res ir.Node) {
     ...
 }
 ```
-
+TODO:
 如果我们是使用字面值初始化数组的，在`walk.walkCompLit`函数中会分析是否应该将其放置在静态区:
 ```go
 // walkCompLit walks a composite literal node:

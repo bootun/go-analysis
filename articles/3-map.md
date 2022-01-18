@@ -1,12 +1,13 @@
 Map剖析
 ===
 ## 初始化
+// TODO:
+
 ## 编译时的map
-节点的op类型
-ir.OMAPLIT
-walk.maplit
+使用字面值初始化map时,map编译时节点的op类型为`ir.OMAPLIT`
 ```Go
 func maplit(n *ir.CompLitExpr, m ir.Node, init *ir.Nodes) {
+    
     // make the map var
     // 虽然这里传入的op类型为ir.OMAKE,但最终生成代码时并
     // 不一定会有makemap,比如当map被分配至栈上，详细请看
