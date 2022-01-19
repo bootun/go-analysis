@@ -1,4 +1,4 @@
-Go slice剖析
+切片剖析
 ===
 [切片(slice)](https://go.dev/ref/spec#Slice_types "Go Specification Slice types")类似数组，都是一段相同类型元素在内存中的连续集合。和数组不同的是，切片的长度是可以动态改变的，而数组一旦确定了长度之后就无法再改变了。
 
@@ -8,7 +8,7 @@ Go slice剖析
  - 使用关键字make()创建切片
  - 使用[切片表达式](https://go.dev/ref/spec#Slice_expressions "Slice expressions")从切片或数组构造切片
  - 使用字面值显式初始化切片
-```Go
+```go
 a := make([]int,3,5) // 使用make关键字
 b := a[1:3]          // 使用切片表达式
 c := []int{1,2,3}    // 使用字面值显式初始化
@@ -16,7 +16,7 @@ c := []int{1,2,3}    // 使用字面值显式初始化
   
 #### 使用
 切片的使用方式类似数组，都是通过下标访问对应的元素：
-```Go
+```go
 // 使用字面值初始化切片
 foo := []int{5,6,7,8,9}
 f1 := foo[0] // f1 = 5
@@ -41,7 +41,7 @@ b3 = bar[2]  // b3 = 9  #和上面的b3比较一下#
 在回答这些问题之前，让我们先看看切片的结构。
 ## 切片的运行时结构
 切片在运行时的表示为`reflect.SliceHeader`，其结构如下
-```Go
+```go
 type SliceHeader struct {
 	  Data uintptr // 底层数组的指针
   	Len  int     // 切片的长度
@@ -51,7 +51,7 @@ type SliceHeader struct {
 我们可以发现，切片本身并没有“存储数据”的能力，它"肚子里“有一个指针,这个指针指向的才是真正存放数据的数组。当我们使用`make([]int,3,5)`来创建切片时，编译器会在底层创建一个长度为5的数组来作为这个切片存储数据的容器，并将切片的Data字段设为指向数组的指针。  
 
 我们可以使用如下方法来将一个切片转换为`reflect.SliceHeader`结构:
-```Go
+```go
 // 初始化一个切片
 slice := make([]int, 3, 5)
 // 将切片的指针转化为unsafe.Pointer类型，再进一步将其转化为reflect.SliceHeader
@@ -63,7 +63,7 @@ fmt.Printf("Cap:%v\n",sliceHeader.Cap) // Cap:5
 ```  
   
 通过这种方法，我们可以很容易的观察使用切片表达式创建切片和原数组的关系:
-```Go
+```go
 // 初始化一个数组
 arr := [3]int{1, 2, 3}
 // 使用切片表达式在数组arr上创建一个切片
@@ -80,7 +80,7 @@ fmt.Printf("Cap:%v\n", sliceHeader.Cap) // Cap:3
 说了这么多，切片究竟长什么样子呢？  
 
 我们拿下面这段代码来做个示范：
-```Go
+```go
 // 初始化一个长度为5的数组
 arr := [5]int{5, 6, 7, 8, 9}
 // 使用切片表达式在arr上构建一个切片
@@ -96,7 +96,7 @@ slice := arr[2:4]
 所以`slice`的内容是数组`arr[2]`到`arr[4]`中间的这部分(从2开始但并不包括4)。
 
 也就是说，`slice`的`Data`字段指针指向的是`arr[2]`的位置,**当前slice里有两个元素**（4 - 2 = 2），`slice[0]`的值是7，`slice[1]`的值是8。
-```Go
+```go
 fmt.Println(slice[0]) // 7
 fmt.Println(slice[1]) // 8
 ```
@@ -105,7 +105,7 @@ fmt.Println(slice[1]) // 8
 因为`slice`的底层数组，也就是`arr`依然有额外的空间供`slice`使用，目前`slice`只包括了`7`和`8`两个元素，但如果需要添加新的元素进`slice`里，那么9这个元素的空间就可以供`slice`使用。  
 
 我们可以查看汇编验证一下是否正确
-```Go
+```go
 ...
 // 初始化部分
 LEAQ type.[5]int(SB), AX
@@ -128,7 +128,7 @@ MOVL $3, CX  // Cap = 3
 切片本身并不是一个动态数组，那么它是如何实现动态扩容的呢？
 
 我们依然拿上面的例子讲解
-```Go
+```go
 arr := [5]int{5, 6, 7, 8, 9}
 slice := arr[2:4]
 // 当前slice属性 Len:2,Cap:3
@@ -141,7 +141,7 @@ slice = append(slice,5) // 此时slice为[7,8,5]
 ![](slice/slice-2.png)
 
 现在我们再次`append`一个元素看看会发生什么事情
-```Go
+```go
 // 接前面
 // 在底层数组没有空间的情况下再次追加元素
 slice = append(slice,6)
@@ -172,11 +172,11 @@ GOSSAFUNC=main.grow go build -gcflags "-N -l" slice.go
 ![](slice/slice-4.png)  
 
 仔细观察我们发现，源代码第7行所对应的汇编指令中，有一行`CALL runtime.growslice`,这个函数定义在`runtime/slice.go`文件中，函数签名如下
-```Go
+```go
 func growslice(et *_type, old slice, cap int) slice
 ```
 该函数传入**旧的slice**和**期望的新容量**，返回**新的`slice`**,让我们看看函数的具体实现：
-```Go
+```go
 func growslice(et *_type, old slice, cap int) slice {
     // 省略了部分代码
     newcap := old.cap
@@ -206,7 +206,7 @@ func growslice(et *_type, old slice, cap int) slice {
 在本例中，我们向`growslice`函数传入的`cap`为`4`(因为旧的`slice`本身有3个元素，再次`append`1个元素,所以期望容量是`4`,为了印证这一点，我们可以观察对应的汇编代码，在`Go 1.17`之后的版本里，x86平台下函数调用使用寄存器来传递函数的参数，寄存器`AX`传递第一个参数,参数二的`runtime.slice`是个结构体，有三个字段，占用3个寄存器，所以`BX`，`CX`，`DI`寄存器是第二个参数，`SI`寄存器为`cap`，仔细看调用前的准备工作`MOVL $4, SI`,印证了我们之前说传入的`cap`为4的说法）,`cap`传入4之后我们向下走，`4 < 2 x 3`，不满足 `cap > doublecap`，继续向下走，到`old.cap < 1024`时条件满足，所以新的容量就等于旧的容量翻倍，也就是`2 x 3 = 6`。
 
 但**上述部分得到的结果并不是真正的新切片容量**，为了提高内存分配效率，减少内存碎片，会在这个newcap的基础上**向上取整**，取整的参考是一个数组，位置在`runtime/sizeclasses.go`中，数组内容如下：
-```Go
+```go
 var class_to_size = [_NumSizeClasses]uint16{0, 8, 16, 24, 32, 48, 64, ..., 32768}
 ```
 上面我们计算的`newcap`为6，每个`int`占用8字节，共计`6 x 8 = 48`字节，正好在这个数组中，不需要再向上取整，如果我们刚刚计算的`newcap`为5，`5 x 8 = 40`字节，需要向上对齐到`48`字节，于是最终的新切片大小就为`6`个元素而不是`5`个。 
@@ -223,7 +223,7 @@ var class_to_size = [_NumSizeClasses]uint16{0, 8, 16, 24, 32, 48, 64, ..., 32768
   
 ## 切片的传递
 我们之前提到过，Go中的参数传递都是**值传递**[](https://go.dev/doc/faq#pass_by_value "pass by value")。但如果你有过一些Go语言的经验，可能会遇到下面这种情况：
-```Go
+```go
 // foo 尝试把数组的第一个元素修改为9
 func foo(arr [3]int) {
     arr[0] = 9
@@ -261,7 +261,7 @@ func main() {
 那是不是可以认为，我们在任意场景下都可以传递`slice`到别的函数？反正里面有指针，做的修改都能在函数外面“看到”呀？
 
 那我们稍微修改一下上面代码中的`bar`函数：
-```Go
+```go
 // bar 尝试在slice后追加元素
 func bar(slice []int) {
     slice = append(slice,4)
@@ -286,7 +286,7 @@ func main() {
 ## 切片的复制
 
 切片使用内建函数`copy`进行复制，`copy`将元素从源切片(`src`)复制到目标切片(`dst`),返回复制的元素数。
-```Go
+```go
 // copy 的函数签名
 func copy(dst, src []Type) int
 

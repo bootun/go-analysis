@@ -5,7 +5,7 @@ Map剖析
 
 ## 编译时的map
 使用字面值初始化map时,map编译时节点的op类型为`ir.OMAPLIT`
-```Go
+```go
 func maplit(n *ir.CompLitExpr, m ir.Node, init *ir.Nodes) {
     
     // make the map var

@@ -14,14 +14,14 @@
 `go version go1.17.5 linux/amd64`。
 # 查看Go内建函数的实现
 初学Go时，你是否好奇过make函数的实现
-```Go
+```go
 // make slice
 slice := make([]int,20)
 // make channel
 channel := make(chan int,3)
 ```
 这个神奇的函数能用来创建好多东西，但当你在IDE里点进去后，却发现它只有一行函数声明：
-```Go
+```go
 func make(t Type, size ...IntegerType) Type
 ```
 于是你的探索就止步于此了...
@@ -30,7 +30,7 @@ func make(t Type, size ...IntegerType) Type
 ### 方法1:使用汇编
 **场景代码**
 
-```Go
+```go
 // foo.go
 func foo()[]int {
     slice := make([]int, 3)
@@ -68,7 +68,7 @@ $ go tool objdump -s "foo" foo.o
 ### 方法2:查看SSA
 **场景代码**
 
-```Go
+```go
 // main.go
 func foo() (string, bool) {
     // 大小尽量大一些，否则如果map分配到栈上，后面的内容可能对不上
@@ -94,7 +94,7 @@ $ GOSSAFUNC=foo go build main.go
 
 ### 方法3:跟踪Go编译器源码
 **场景代码**
-```Go
+```go
 func foo() ([]int,[]int) {
     s1 := make([]int,10)
     s2 := []int{1,2,3,4,5}
@@ -107,12 +107,12 @@ func foo() ([]int,[]int) {
 Go编译器源码的位置在`$GOROOT/src/cmd/compile/internal/gc`目录下(此处的gc指Go compiler)，入口函数是`/cmd/compile/internal/gc/main.go`中的`Main`函数，篇幅原因，这里我们只介绍上述代码所经过的几个关键节点，如果想详细了解Go编译过程，可以参考[《Go语言设计与实现》](https://draveness.me/golang/ "《Go语言设计与实现》")一书。
 
 语法分析和类型检查的入口在上述`Main`函数的这一行：
-```Go
+```go
 // Parse and typecheck input.
 noder.LoadPackage(flag.Args())
 ```
 这个函数内可以看到语法分析和类型检查的不同阶段：
-```Go
+```go
 // Phase 1: const, type, and names and types of funcs.
 // This will gather all the information about types
 // and methods but doesn't depend on any of it.
@@ -136,13 +136,13 @@ for i := 0; i < len(typecheck.Target.Decls); i++ {
 `typecheck.Target.Decls[i] = typecheck.Stmt(n)`这行代码，这里是进入类型检查的入口，该函数其实是`cmd/compile/internal/typecheck/typecheck.go`下`typecheck`函数的包装函数，`typecheck`函数又会调用`typecheck1`函数,我们的要找的第一部分内容就在这里啦。  
 
 `typecheck1`函数下有这样一处地方：
-```Go
+```go
 case ir.OMAKE:
     n := n.(*ir.CallExpr)
     return tcMake(n)
 ```
 表示当前处理的节点是`OMAKE`时的情景，让我们跟踪`tcMake`函数，看看里面都做了些什么：
-```Go
+```go
 // tcMake typechecks an OMAKE node.
 func tcMake(n *ir.CallExpr) ir.Node {
 ...
@@ -163,7 +163,7 @@ switch t.Kind() {
 
 后面追踪起起来函数太多了，这里只放最后两个，第一个是处理op为`OMAKESLICE`时的场景：
 
-```Go 
+```go 
 func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {
   ...
   switch n.Op() {
@@ -176,7 +176,7 @@ func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {
 ```
 
 第二个就是上面函数调用的`walkMakeSlice`函数：
-```Go 最终结果
+```go 最终结果
 // walkMakeSlice walks an OMAKESLICE node.
 func walkMakeSlice(n *ir.MakeExpr, init *ir.Nodes) ir.Node {
     ...

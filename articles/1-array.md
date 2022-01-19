@@ -1,11 +1,11 @@
-Go数组剖析
+数组剖析
 ====
 
 ## 数组的概念
 [数组(array)](https://go.dev/ref/spec#Array_types "Go Specification-Array types")是**单一类型**元素的编号序列，元素的个数称为数组的长度，长度不能为负数。 
 
 ## 数组的初始化方式
-```Go
+```go
 // 显式指定数组大小，长度为3
 var a = [3]int{1,2,3} 
 
@@ -18,7 +18,7 @@ ab两种初始化方式在运行期间是等价的，只不过a的类型在编�
 
 ## 数组的类型
 数组的长度也是类型的一部分，也就是说，下面两个数组不是同一种类型
-```Go
+```go
 a := [3]int{}
 b := [4]int{}
 a = b // 编译错误：cannot use b (type [4]int) as type [3]int in assignment
@@ -28,7 +28,7 @@ a = b // 编译错误：cannot use b (type [4]int) as type [3]int in assignment
 ## 数组的内存分配
 数组在内存中是由一块连续的内存组成的。
 
-```Go
+```go
 arr := [3]int{1, 2, 3}
 fmt.Println(&arr[0]) // 0xc00001a240
 fmt.Println(&arr[1]) // 0xc00001a248
@@ -62,7 +62,7 @@ MOVQ    $3, 16(AX)
 - **编译期间不能确定访问位置的情况**  
 
 假设有以下代码
-```Go
+```go
 func foo() int{
     arr := [3]int{1,2,3}
     return arr[2]
@@ -99,7 +99,7 @@ Exit v27 (23)
 
 ## 数组的比较
 如果数组的元素类型可以相互比较，那么数组也可以。比如两个**长度相等**的int数组可以进行比较，但两个长度相等的map数组就不可以比较，因为map之间不可以互相比较。
-```Go
+```go
 var a, b [3]int
 fmt.Println(a == b) // true
 
@@ -108,7 +108,7 @@ fmt.Println(c == d) // invalid operation: c == d (map can only be compared to ni
 ```
 ## 数组的传递
 Go中所有的内容都是值传递[](https://go.dev/doc/faq#pass_by_value "Go中的值传递")，因此赋值/传参/返回数组等操作都会将整个数组进行复制。更好的方式是使用slice，这样就能避免复制大对象所带来的开销。
-```Go
+```go
 func getArray() [3]int {
 	  arr := [3]int{1,2,3}
 	  fmt.Printf("%p\n",&arr) // 0xc00001a258
@@ -125,7 +125,7 @@ func main() {
 
 ## 编译时的数组
 数组在编译时的节点表示为`ir.OTARRAY`,我们可以在类型检查阶段找到对该节点的处理:  
-```Go
+```go
 // typecheck1 should ONLY be called from typecheck.
 func typecheck1(n ir.Node, top int) ir.Node {
     ...
@@ -139,7 +139,7 @@ func typecheck1(n ir.Node, top int) ir.Node {
 }
 ```
 我们将`tcArrayType`的关键节点放在下面:
-```Go
+```go
 func tcArrayType(n *ir.ArrayType) ir.Node {
     if n.Len == nil { // [...]T的形式
         // 如果长度是...会直接返回，等到下一阶段进行处理
@@ -160,7 +160,7 @@ func tcArrayType(n *ir.ArrayType) ir.Node {
 如果直接使用常数作为数组的长度，那么数组的类型在这里就确定好了。  
 如果使用`[...]T`+字面量这种形式,则会在`typecheck.tcCompLit`函数中确认元素的数量，并将其op更改为`ir.OARRAYLIT`以便于之后阶段使用
 
-```Go
+```go
 func tcCompLit(n *ir.CompLitExpr) (res ir.Node) {
     ...
     // Need to handle [...]T arrays specially.
@@ -181,21 +181,3 @@ func tcCompLit(n *ir.CompLitExpr) (res ir.Node) {
 }
 ```
 TODO:
-如果我们是使用字面值初始化数组的，在`walk.walkCompLit`函数中会分析是否应该将其放置在静态区:
-```go
-// walkCompLit walks a composite literal node:
-// OARRAYLIT, OSLICELIT, OMAPLIT, OSTRUCTLIT (all CompLitExpr), or OPTRLIT (AddrExpr).
-func walkCompLit(n ir.Node, init *ir.Nodes) ir.Node {
-    if isStaticCompositeLiteral(n) && !ssagen.TypeOK(n.Type()) {
-        n := n.(*ir.CompLitExpr) // not OPTRLIT
-        // n can be directly represented in the read-only data section.
-        // Make direct reference to the static data. See issue 12841.
-        vstat := readonlystaticname(n.Type())
-        fixedlit(inInitFunction, initKindStatic, n, vstat, init)
-        return typecheck.Expr(vstat)
-    }
-    var_ := typecheck.Temp(n.Type())
-    nylit(n, var_, init)
-    return var_
-}
-```
