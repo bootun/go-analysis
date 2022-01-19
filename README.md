@@ -5,8 +5,8 @@ Go剖析系列
 
 本书写作时定的目标很宏大，希望能覆盖面试时可能问到的各种内部实现问题(Go语言本身)，目前看来[切片剖析](./articles/2-slice.md)一章节算是"勉强接近"了这一目标，如果读者有什么写作建议或者内容建议，可以联系我或在issue中告知我。
 
-## 在线阅读
-[GitBook](https://bootun.gitbook.io/go-analysis/)
+<!--## 在线阅读
+[GitBook](https://bootun.gitbook.io/go-analysis/)-->
 
 ## 目录
  - [数组剖析](./articles/1-array.md)
