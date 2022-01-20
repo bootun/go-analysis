@@ -124,7 +124,173 @@ func main() {
 
 
 ## 编译时的数组
-数组在编译时的节点表示为`ir.OTARRAY`,我们可以在类型检查阶段找到对该节点的处理:  
+// TODO: 整理此部分内容  
+
+`arr := [3]int{1,2,3}`在第三阶段类型检查前的语法树为:
+<details>
+
+```json
+{
+    "op":"ir.OAS",
+    "X":{
+        "op":"ir.ONAME",
+        "sym":{"Name":"arr"},
+        "Ntype":nil
+    },
+    "Y":{
+        // Type{List} (composite literal, not yet lowered to specific form)
+        "op":"ir.OCOMPLIT",
+        // ir.ArrayType struct
+        "Ntype":{
+            //  An ArrayType represents a [Len]Elem type syntax. If Len is nil, the type is a [...]Elem in an array literal.
+
+            // [8]int or [...]int
+            "op":"ir.OTARRAY",
+            "Len":{
+                "op":"ir.OLITERAL",
+                "typ":{
+                    // 
+                    "kind":"types.TIDEAL",
+                }
+            },
+            "Elem":{
+                "op":"ir.ONONAME",
+                "sym":{"Name":"int"}
+            }
+        },
+        "List":[
+            {"op":"ir.OLITERAL","val":1},
+            {"op":"ir.OLITERAL","val":2},
+            {"op":"ir.OLITERAL","val":3}
+        ]
+    }
+}
+```
+</details>
+经过第三阶段检查后变为:
+<details>
+
+```json
+{
+    "op":"ir.OAS",
+    "X":{
+        "op":"ir.ONAME",
+        "sym":{"Name":"arr"},
+        "Ntype":nil
+    },
+    "Y":{
+        // Type{List} (composite literal, Type is array)
+        "op":"ir.OARRAYLIT", 
+        // type.Type struct
+        "typ":{
+            // types.Array struct
+            "Extra":{
+                // type.Type struct
+                "Elem":{
+                    "Width":8,
+                    "kind":"types.TINT",
+                    "Align":8,
+                },
+                "Bound":3
+            },
+            "Width":24,
+            "kind":"types.TARRAY",
+            "Align":8,
+        },
+        "Ntype":nil,
+        "List":[
+            {"op":"OLITERAL","val":1,"Width":8},
+            {"op":"OLITERAL","val":2,"Width":8},
+            {"op":"OLITERAL","val":3,"Width":8},
+        ],
+        "Len":0
+    }
+}
+```
+</details>
+
+`arr := [...]int{1, 2, 3}`在第3阶段类型检查前的语法树
+用JSON形式表示为:
+<details>
+
+```json
+{
+    "op":"ir.OAS",
+    "X":{
+        "op":"ir.ONAME",
+        "sym":{"Name":"arr"},
+        "Ntype":nil
+    },
+    "Y":{
+        // Type{List} (composite literal, not yet lowered to specific form)
+        "op":"ir.OCOMPLIT",
+        // ir.ArrayType struct
+        "Ntype":{
+            //  An ArrayType represents a [Len]Elem type syntax. If Len is nil, the type is a [...]Elem in an array literal.
+
+            // [8]int or [...]int
+            "op":"ir.OTARRAY",
+            "Len":nil,
+            "Elem":{
+                "op":"ir.ONONAME",
+                "sym":{"Name":"int"}
+            }
+        },
+        "List":[
+            {"op":"ir.OLITERAL","val":1},
+            {"op":"ir.OLITERAL","val":2},
+            {"op":"ir.OLITERAL","val":3}
+        ]
+    }
+}
+```
+</details>
+
+经过类型检查第三阶段后，语法数变为:
+<details>
+
+```json
+{
+    "op":"ir.OAS",
+    "X":{
+        "op":"ir.ONAME",
+        "sym":{"Name":"arr"},
+        "Ntype":nil
+    },
+    "Y":{
+        // Type{List} (composite literal, Type is array)
+        "op":"ir.OARRAYLIT", 
+        // type.Type struct
+        "typ":{ // tcArray
+            // types.Array struct
+            "Extra":{
+                // type.Type struct
+                "Elem":{
+                    "Width":8,
+                    "kind":"types.TINT",
+                    "Align":8,
+                },
+                "Bound":3
+            },
+            "Width":24,
+            "kind":"types.TARRAY",
+            "Align":8,
+        },
+        "Ntype":nil,
+        "List":[
+            {"op":"OLITERAL","val":1,"Width":8},
+            {"op":"OLITERAL","val":2,"Width":8},
+            {"op":"OLITERAL","val":3,"Width":8},
+        ],
+        "Len":0
+    }
+}
+```
+</details>
+
+`[...]int{}`类型的处理逻辑在`typecheck.tcCompLit`函数中。
+数组在编译时的节点表示为`ir.OTARRAY`,我们可以在类型检查阶段找到对该节点的处理: 
+
 ```go
 // typecheck1 should ONLY be called from typecheck.
 func typecheck1(n ir.Node, top int) ir.Node {
