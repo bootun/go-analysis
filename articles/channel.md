@@ -134,3 +134,26 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 注释基本已经概括了这个函数的作用:`chanrecv`函数从c中接收数据并写入ep中，ep可能为`nil`,在这种情况下，接收到的数据将被忽略(ignored)。如果`block == false`并且没有元素可用,则返回`false, false`。否则，如果这个channel已经被close了,则将*ep置零，返回`true, false`。否则用一个元素填充ep并返回`true, true`。一个非`nil`的ep一定指向**堆**或者调用者的栈。  
 
 block一般都是true的，也就是阻塞的，只有用作`select`的条件且有`default`分支时，才会传入`false`。
+
+## 读写channel时的结果
+| Operation | Channel state | Result |
+| ---  | --- | --- |
+| Read | nil | Block |
+|      | Open and Not Empty | Value |
+|      | Open and Empty | Block |
+|      | Closed | &lt;default value&gt;, false |
+|      | Write Only | Compilation Error |
+| --- | --- | --- |
+| Write | nil | Block |
+|      | Open and Full | Block |
+|      | Open and Not Full | Write Value |
+|      | Closed | panic |
+|      | Received Only | Compilation Error |
+| --- | --- | --- |
+| Close | nil |  |
+|      | Open and Not Empty | Closes Channel; read succeed until channel is drained, then read produce default value |
+|      | Open and Empty | Close Channel; read produce default value |
+|      | Closed | panic |
+|      | Received Only | Compilation Error |
+
+以上内容选自《Concurrency in Go》，描述了在read, write, close各种不同状态的channel时的结果，可以对照一下源码，查看是否正确。
