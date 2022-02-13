@@ -54,7 +54,7 @@ type sudog struct {
 func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool) {
     // channel == nil(尝试读一个空的channel)
     if c == nil {
-        // none blocking(非阻塞情况，比如用在select里，就直接返回)
+        // none blocking(非阻塞情况，比如在select里有default分支，就直接返回)
 		if !block {
 			return
 		}
@@ -63,7 +63,7 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 		throw("unreachable")
 	}
 
-    // 如果读channel非阻塞(select内)并且channel此时为空(没数据可以读)
+    // 如果读channel非阻塞(select内有default)并且channel此时为空(没数据可以读)
     if !block && empty(c) {
         // 检查channel是否关闭
         if atomic.Load(&c.closed) == 0 {
@@ -120,7 +120,7 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
     // 缓冲区没东西
     // channel不为nil
     
-    // 非阻塞接收,比如用在select上(下面有解释)
+    // 非阻塞接收
 	if !block {
 		unlock(&c.lock)
 		return false, false
@@ -133,4 +133,4 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 ```
 注释基本已经概括了这个函数的作用:`chanrecv`函数从c中接收数据并写入ep中，ep可能为`nil`,在这种情况下，接收到的数据将被忽略(ignored)。如果`block == false`并且没有元素可用,则返回`false, false`。否则，如果这个channel已经被close了,则将*ep置零，返回`true, false`。否则用一个元素填充ep并返回`true, true`。一个非`nil`的ep一定指向**堆**或者调用者的栈。  
 
-block一般都是true的，也就是阻塞的，只有用作`select`的条件时，才会传入`false`。
+block一般都是true的，也就是阻塞的，只有用作`select`的条件且有`default`分支时，才会传入`false`。
