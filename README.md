@@ -9,10 +9,16 @@ Go剖析系列
 [GitBook](https://bootun.gitbook.io/go-analysis/)-->
 
 ## 目录
+### 数据结构
  - [数组剖析](./articles/array.md)
  - [切片剖析](./articles/slice.md)
  - [map剖析(写作中)](./articles/map.md)
- - [channel剖析(写作中)](./articles/channel.md)
+ 
+### 并发
+- [channel剖析(写作中)](./articles/channel.md)
+<!-- - [select](./articles/select.md) -->
+<!-- - [WaitGroup]() -->
+### 附录
  - [附录1:如何寻找源码位置](./articles/appendix/1-source.md)
   
 ## 推荐阅读
