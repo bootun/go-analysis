@@ -1,26 +1,24 @@
 Go剖析系列
 ===
 ## 简介
-从汇编/编译器等多个角度了解Go语言内部原理。  
-
-本书写作时定的目标很宏大，希望能覆盖面试时可能问到的各种内部实现问题(Go语言本身)，目前看来[**切片剖析**](./articles/slice.md)一章节算是"**勉强接近**"了这一目标，如果读者有什么写作建议或者内容建议，可以联系我或在issue中告知我。
-
-<!--## 在线阅读
-[GitBook](https://bootun.gitbook.io/go-analysis/)-->
+从编译器/runtime/程序员等多个角度了解Go语言内部原理。
 
 ## 目录
 ### 数据结构
- - [数组剖析](./articles/array.md)
  - [切片剖析](./articles/slice.md)
+ - [数组剖析](./articles/array.md)
  - [map剖析(写作中)](./articles/map.md)
  
 ### 并发
 - [channel剖析(写作中)](./articles/channel.md)
 <!-- - [select](./articles/select.md) -->
 <!-- - [WaitGroup]() -->
+
+### 静态分析
+
 ### 附录
- - [附录1:如何寻找源码位置](./articles/appendix/1-source.md)
-  
+ - [附录1: 如何寻找源码位置](./articles/appendix/1-source.md)
+ - [静态分析: 不要复制我的结构体!](./articles/go-vet/copylock.md)
 ## 推荐阅读
 **排名不分先后**
 
