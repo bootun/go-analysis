@@ -27,3 +27,11 @@ func maplit(n *ir.CompLitExpr, m ir.Node, init *ir.Nodes) {
 	// Build list of var[c] = expr.
 }
 ```
+
+## 运行时的map
+
+### 数据结构
+### 访问
+### 赋值
+### 删除
+### 扩容

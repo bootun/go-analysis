@@ -5,12 +5,12 @@ Go剖析系列
 
 ## 目录
 ### 数据结构
- - [切片剖析](./articles/slice.md)
- - [数组剖析](./articles/array.md)
- - [map剖析(写作中)](./articles/map.md)
+ - [切片剖析](./articles/container/slice.md)
+ - [数组剖析](./articles/container/array.md)
+ - [map剖析(写作中)](./articles/container/map.md)
  
 ### 并发
-- [channel剖析(写作中)](./articles/channel.md)
+- [channel剖析(写作中)](./articles/concurrent/channel.md)
 <!-- - [select](./articles/select.md) -->
 <!-- - [WaitGroup]() -->
 
