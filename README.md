@@ -4,6 +4,8 @@ Go剖析系列
 从编译器/runtime/程序员等多个角度了解Go语言内部原理。
 
 ## 目录
+### 编译器
+ - [内联优化](./articles/compiler/inline.md)
 ### 数据结构
  - [切片剖析](./articles/container/slice.md)
  - [数组剖析](./articles/container/array.md)
