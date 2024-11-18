@@ -43,29 +43,20 @@ type sudog struct {
 - `elemtype`顾名思义就是元素的类型了。  
 - `sendx`和`recvx`分别表示发送者和接受者的数据位置(你可以想象成两个指针/下标)。  
 - `recvq`和`sendq`分别表示接受者和发送者的等待队列，它是一个(双向)链表数据结构,`waitq`类型里保存了链表的头和尾。而`sudog`里则保存了对应goroutine的`runtime.g`结构体以及链表前后节点的指针。
+
 ## 创建channel
 `runtime/chan.go`里定义了创建channel的函数:  
 ```go
 func makechan(t *chantype, size int) *hchan {
 	elem := t.Elem
+	...
 
-	// compiler checks this but be safe.
-	if elem.Size_ >= 1<<16 {
-		throw("makechan: invalid channel element type")
-	}
-	if hchanSize%maxAlign != 0 || elem.Align_ > maxAlign {
-		throw("makechan: bad alignment")
-	}
-
+	// 计算创建channel所需内存大小
 	mem, overflow := math.MulUintptr(elem.Size_, uintptr(size))
 	if overflow || mem > maxAlloc-hchanSize || size < 0 {
 		panic(plainError("makechan: size out of range"))
 	}
 
-	// Hchan does not contain pointers interesting for GC when elements stored in buf do not contain pointers.
-	// buf points into the same allocation, elemtype is persistent.
-	// SudoG's are referenced from their owning thread so they can't be collected.
-	// TODO(dvyukov,rlh): Rethink when collector can move allocated objects.
 	var c *hchan
 	switch {
 	case mem == 0:
@@ -89,12 +80,10 @@ func makechan(t *chantype, size int) *hchan {
 	c.dataqsiz = uint(size)
 	lockInit(&c.lock, lockRankHchan)
 
-	if debugChan {
-		print("makechan: chan=", c, "; elemsize=", elem.Size_, "; dataqsiz=", size, "\n")
-	}
 	return c
 }
 ```
+channel的初始化非常简单，主要逻辑就是根据元素类型和元素数量来计算出channel的总内存大小，然后根据内存大小来分配内存并初始化channel的一些字段。
 
 ## 向channel中发送数据
 `xx <-`语法会被编译器翻译为`runtime.chansend1`, 它底层对应着`runtime.chansend`函数，主要逻辑如下:
@@ -102,19 +91,16 @@ func makechan(t *chantype, size int) *hchan {
 ```go
 func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 	if c == nil {
+		// 如果向一个nil channel发送数据
 		if !block {
+			// 如果是非阻塞的发送，直接返回false
+			// 注意，只要是通过 xxx <- 这种方式进来的，都是block的
+			// 通过select进来的才可能是false
 			return false
 		}
+		// 向一个nil channel 写数据会永远的挂起(阻塞)
 		gopark(nil, nil, waitReasonChanSendNilChan, traceBlockForever, 2)
 		throw("unreachable")
-	}
-
-	if debugChan {
-		print("chansend: chan=", c, "\n")
-	}
-
-	if raceenabled {
-		racereadpc(c.raceaddr(), callerpc, abi.FuncPCABIInternal(chansend))
 	}
 
 	// Fast path: check for failed non-blocking operation without acquiring the lock.
@@ -152,6 +138,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 	if sg := c.recvq.dequeue(); sg != nil {
 		// Found a waiting receiver. We pass the value we want to send
 		// directly to the receiver, bypassing the channel buffer (if any).
+		// send底层会调用sendDirect，直接把数据通过memmove直接写入到buf中，然后调用goready唤醒接收者。
 		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
 		return true
 	}
